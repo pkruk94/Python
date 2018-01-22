@@ -30,7 +30,7 @@ def nazw(s):
     if " " in litery:
         litery.remove(" ")
         litery = "".join(litery)
-    litery = litery.lower()    # tylko małe litery   (np. boleslawprus)
+    litery = litery.lower()    # tylko male litery   (np. boleslawprus)
     return litery
 
 
@@ -38,6 +38,7 @@ def generujZagadkę(s):
     litery = nazw(s)
 
     polskieSlowa = open('slowa.txt').readlines()   #słownik polskich słów, (zwraca string)
+    
 
     naziwsko = litery
     for slowo in polskieSlowa:              #sprawdza czy dane slowo ze slownika jest ukladalne z dostepnego ciagu
