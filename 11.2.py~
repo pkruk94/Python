@@ -36,5 +36,4 @@ def najdluzsze():
         if len(para[0]) > len(najdluzsze):
             najdluzsze = para[0]
     return najdluzsze
-
-print (najdluzsze())
+czyCesarskie()

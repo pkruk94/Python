@@ -22,7 +22,7 @@ def deszyfruj(s):
 
     liczby = list(range(33))
     del liczby[0]
-
+    print(liczby)
     for p in permutations(liczby):
         slownik = dict(zip(list(alf),p))    # permutacje mozliwycj kluczy
         for i in s:     # zamieniam kazde slowo osobno
