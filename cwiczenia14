@@ -1,0 +1,326 @@
+#lang racket
+
+;;; rozdział 3.1.1
+
+(define balance 100)
+
+(define (withdraw amount)
+  (if (>= balance amount)
+      (begin (set! balance (- balance amount))
+             balance)
+      "Insufficient funds"))
+
+;: (withdraw 25)
+;: (withdraw 25)
+;: (withdraw 60)
+;: (withdraw 15)
+
+(define new-withdraw
+  (let ((balance 100))
+    (lambda (amount)
+      (if (>= balance amount)
+          (begin (set! balance (- balance amount))
+                 balance)
+          "Insufficient funds"))))
+
+
+(define (make-withdraw balance)
+  (lambda (amount)
+    (if (>= balance amount)
+        (begin (set! balance (- balance amount))
+               balance)
+        "Insufficient funds")))
+
+
+;: (define W1 (make-withdraw 100))
+;: (define W2 (make-withdraw 100))
+;: (W1 50)
+;: (W2 70)
+;: (W2 40)
+;: (W1 40)
+
+(define (make-account balance original-pass)
+  (define (withdraw amount)
+    (if (>= balance amount)
+        (begin (set! balance (- balance amount))
+               balance)
+        "Insufficient funds"))
+  (define (deposit amount)
+    (set! balance (+ balance amount))
+    balance)
+  (define (dispatch m password)
+    (if (not (eq? password original-pass))
+        (error "incorrect password")
+        (cond ((eq? m 'withdraw) withdraw)
+              ((eq? m 'deposit) deposit)
+              (else (error "Unknown request -- MAKE-ACCOUNT"
+                           m)))))
+  dispatch)
+
+;: (define acc (make-account 100))
+
+;: ((acc 'withdraw) 50)
+;: ((acc 'withdraw) 60)
+;: ((acc 'deposit) 40)
+;: ((acc 'withdraw) 60)
+
+;;; rozdział 3.1.3
+
+(define (make-simplified-withdraw balance)
+  (lambda (amount)
+    (set! balance (- balance amount))
+    balance))
+
+
+;: (define W (make-simplified-withdraw 25))
+;: (W 20)
+;: (W 10)
+
+
+(define (make-decrementer balance)
+  (lambda (amount)
+    (- balance amount)))
+
+;: (define D (make-decrementer 25))
+;: (D 20)
+;: (D 10)
+
+;: ((make-decrementer 25) 20)
+;: ((lambda (amount) (- 25 amount)) 20)
+;: (- 25 20)
+
+;: ((make-simplified-withdraw 25) 20)
+
+;: ((lambda (amount) (set! balance (- 25 amount)) 25) 20)
+;: (set! balance (- 25 20)) 25
+
+;;; Toższamość obiektów
+
+;: (define D1 (make-decrementer 25))
+;: (define D2 (make-decrementer 25))
+;: 
+;: (define W1 (make-simplified-withdraw 25))
+;: (define W2 (make-simplified-withdraw 25))
+;: 
+;: (W1 20)
+;: (W1 20)
+;: (W2 20)
+
+;: (define peter-acc (make-account 100))
+;: (define paul-acc (make-account 100))
+;: 
+;: (define peter-acc (make-account 100))
+;: (define paul-acc peter-acc)
+
+;;; Kłopoty z programowaniem imperatywnym
+
+(define (factorial-iter n)
+  (define (iter product counter)
+    (if (> counter n)
+        product
+        (iter (* counter product)
+              (+ counter 1))))
+  (iter 1 1))
+
+(define (factorial n)
+  (let ((product 1)
+        (counter 1))
+    (define (iter)
+      (if (> counter n)
+          product
+          (begin (set! product (* counter product))
+                 (set! counter (+ counter 1))
+                 (iter))))
+    (iter)))
+
+
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+
+(define (make-cycle xs)
+  (set-mcdr! (last-pair xs) xs))    ;; zdefiniowac dla modyikowalnych
+
+(define (last-pair xs)
+  (if (null? (mcdr xs))
+      xs
+      (last-pair (mcdr xs))))
+
+(define (has-cycle? xs)
+  (define (F p1 p2)
+    (cond [(or (null? p2) (null? (mcdr p2))) #f]
+          [(eq? p1 p2) #t]
+          [else (F (mcdr p1) (mcdr (mcdr p2)))]))
+  (F (xs (mcdr xs))))
+
+
+
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+;; cs 4
+
+#|
+
+(define (make-monitored f)
+  (let ((counter 0))
+    (define f1
+      (lambda xs (begin
+                   (set! counter (+ 1 counter))
+                   (apply f xs))))
+    (define f2
+      (define reset
+        (lambda () (set! counter 0))))))
+
+|#
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;
+
+;; zadanie 6
+
+
+(define (lcons x f)
+  (cons x f))
+
+(define (lhead l)
+  (car l))
+
+(define (ltail l)
+  ((cdr l)))
+
+(define (ltake n l)
+  (if (or (null? l) (= n 0))
+      null
+      (cons (lhead l)
+            (ltake (- n 1) (ltail l)))))
+
+(define (lfilter p l)
+  (cond [(null? l) null]
+        [(p (lhead l))
+         (lcons (lhead l)
+                (lambda ()
+                  (lfilter p (ltail l))))]
+        [else (lfilter p (ltail l))]))
+
+(define (lmap f . ls)
+  (if (ormap null? ls) null
+      (lcons (apply f (map lhead ls))
+             (lambda ()
+               (apply lmap (cons f (map ltail ls)))))))
+
+;; ciąg Fibonacciego
+
+(define fib
+  (lcons 0
+         (lambda ()
+           (lcons 1
+                  (lambda ()
+                    (lmap + fib (ltail fib)))))))
+           
+;; spamiętywanie
+
+(define (memo-proc proc) 
+  (let ((already-run? false) (result false))
+    (lambda ()
+      (if (not already-run?)
+          (begin (set! result (proc))
+                 (set! already-run? true)
+                 result)
+          result))))
+
+;(define (lcons x f)
+;  (cons x (memo-proc f)))
+
+;; alternatywna implementacja wykorzystująca listy modyfikowalne
+
+;(define (lcons x f)
+;  (mcons x f))
+
+;(define (lhead l)
+;  (mcar l))
+
+;(define (ltail l)
+;  (when (procedure? (mcdr l))
+;      (set-mcdr! l ((mcdr l))))
+;  (mcdr l))
+
+;; dodatkowy przykład: liczby pierwsze
+
+(define (integers-starting-from n)
+  (lcons n (lambda () (integers-starting-from (+ n 1)))))
+
+(define naturals (integers-starting-from 0))
+
+(define (divisible? x y) (= (remainder x y) 0))
+(define no-sevens
+  (lfilter (lambda (x) (not (divisible? x 7)))
+           naturals))
+
+(define (sieve stream)
+  (lcons
+   (lhead stream)
+   (lambda ()
+     (sieve (lfilter
+             (lambda (x)
+               (not (divisible? x (lhead stream))))
+             (ltail stream))))))
+
+(define primes (sieve (integers-starting-from 2)))
+
+
+
+
+;;;;;
+
+(define silnie
+  (lcons 1
+         (lambda ()
+         (lmap * silnie (integers-starting-from 1)))))
+
+;; zadanie 7 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
